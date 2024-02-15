@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
+# check_foreman by Marc Sauer
+# Licensed under GPL v3
+
 import json
 import sys
 import argparse
+import requests
 
 # Edit these variables accordingly
 SATELLITE_SERVER_IP="satellite.example"
-SATELLITE_API_ENDPOINT="https://" + SATELLITE_SERVER_IP + "/api"
+SATELLITE_API_ENDPOINT="https://" + SATELLITE_SERVER_IP + "/api/hosts"
 SATELLITE_API_USER="changeme"
 SATELLITE_API_TOKEN="changeme"
 
@@ -16,6 +20,7 @@ EXIT_CODE_HOST_NOT_FOUND=2
 EXIT_CODE_JSON_ERROR=3
 EXIT_CODE_EXAMPLE_FILE_NOT_FOUND=4
 EXIT_CODE_TARGET_EMPTY=5
+EXIT_CODE_REQUEST_ERROR=6
 
 def debug_message(message, debug=False):
     if debug:
@@ -36,6 +41,23 @@ def load_example_file(filepath):
     except json.JSONDecodeError:
         print(f'The file {filepath} is not valid JSON.')
 
+def get_api_data(api_url):
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()  # Raises an HTTPError exception if the HTTP status code is not 200.
+
+        # Extract JSON from the response
+        data = response.json()
+
+        if not data:
+            error_message("Error: Empty response from the API.")
+            sys.exit(EXIT_CODE_REQUEST_ERROR)
+        return data
+    
+    except requests.exceptions.RequestException as e:
+        error_message(f"Error making GET request: {e}")
+        sys.exit(EXIT_CODE_REQUEST_ERROR)
+
 def output_simple_checkmk_check(service_status, service_name, output_text):
     checkmk_check = f'{service_status} "{service_name}" - {output_text}'
     print(checkmk_check)
@@ -43,7 +65,6 @@ def output_simple_checkmk_check(service_status, service_name, output_text):
 def get_host_index(sourcedata, target_name, debug=False):
     try:
         for index, host in enumerate(sourcedata["results"]):
-            debug_message(f'Searched {index}', debug)
             if host["name"] == target_name:
                 return index
 
@@ -53,8 +74,6 @@ def get_host_index(sourcedata, target_name, debug=False):
     except KeyError as e:
         print(f"Error accessing JSON key: {e}")
         sys.exit(EXIT_CODE_JSON_ERROR)
-
-
 
 def print_execution_status(sourcedata, hostname, debug=False):
     service_name = "Execution status"
@@ -113,7 +132,8 @@ def print_errata_status(sourcedata, hostname, debug=False):
         output_simple_checkmk_check(3, service_name, build_error)
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='CheckMK check_foreman Script')
+    parser = argparse.ArgumentParser(prog='check_foreman', description='CheckMK check_foreman Script')
+
     parser.add_argument('-t', '--target', help='Specify the target hostname', required=True)
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('-s', '--simulate', action='store_true', help='Do not make any real API calls. Just use the example-data/example-api-response.json file')
@@ -138,9 +158,12 @@ if __name__ == "__main__":
         error_message("Target shall not be empty!")
         sys.exit(EXIT_CODE_TARGET_EMPTY)
 
-    # Only for debugging
-    data = load_example_file("example-data/example-api-response.json")
-
+    if args.simulate:
+        debug_message("Simulation mode enabled")
+        data = load_example_file("example-data/example-api-response.json")
+    else:
+        data = get_api_data(SATELLITE_API_ENDPOINT)
+    
     debug_message(f'Got target hostname {target_host}', args.debug)
 
     print_execution_status(data, target_host, args.debug)
