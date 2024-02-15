@@ -1,0 +1,3 @@
+- Rework Logging with Python logging class [ ] https://docs.python.org/3/howto/logging.html
+- Advanced error catching
+- Actual API call
