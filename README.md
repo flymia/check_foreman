@@ -1,2 +1,21 @@
 # check_foreman
-Simple checkmk check for various Foreman metrics.
+
+Simple CheckMK check script to get metrics from Foreman or Red Hat Satellite.
+
+# Screenshots
+
+...
+
+# Usage
+
+...
+
+# Contribute
+
+You are welcome to help this little project by contributing changes, fixes or additional features as pull requests.
+
+You can reach me on the Fediverse on my instance: @Ventor@social.ventora.net 😊
+
+# License
+
+This is licensed under GPL v3. 
