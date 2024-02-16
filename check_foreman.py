@@ -41,9 +41,10 @@ def load_example_file(filepath):
     except json.JSONDecodeError:
         print(f'The file {filepath} is not valid JSON.')
 
-def get_api_data(api_url):
+def get_api_data(api_url, insecure, debug=False):
     try:
-        response = requests.get(api_url)
+        # TODO: logging.captureWarnings(True) for TLS warning stuff
+        response = requests.get(api_url, auth=HTTPBasicAuth(SATELLITE_API_USER, SATELLITE_API_TOKEN), verify=insecure)
         response.raise_for_status()  # Raises an HTTPError exception if the HTTP status code is not 200.
 
         # Extract JSON from the response
@@ -53,7 +54,7 @@ def get_api_data(api_url):
             error_message("Error: Empty response from the API.")
             sys.exit(EXIT_CODE_REQUEST_ERROR)
         return data
-    
+
     except requests.exceptions.RequestException as e:
         error_message(f"Error making GET request: {e}")
         sys.exit(EXIT_CODE_REQUEST_ERROR)
@@ -104,9 +105,9 @@ def print_global_status(sourcedata, hostname, debug=False):
     debug_message(last_global_status, debug)
 
     if last_global_status == 2:
-        output_simple_checkmk_check(0, service_name, last_global_label)
-    elif last_global_status == 0:
         output_simple_checkmk_check(1, service_name, last_global_label)
+    elif last_global_status == 0:
+        output_simple_checkmk_check(0, service_name, last_global_label)
     else:
         build_error = f"Could not get any last execution details. Error: {last_global_label}"
         output_simple_checkmk_check(3, service_name, build_error)
@@ -137,17 +138,9 @@ def parse_arguments():
     parser.add_argument('-t', '--target', help='Specify the target hostname', required=True)
     parser.add_argument('-d', '--debug', action='store_true', help='Enable debug mode')
     parser.add_argument('-s', '--simulate', action='store_true', help='Do not make any real API calls. Just use the example-data/example-api-response.json file')
+    parser.add_argument('--insecure', action='store_true', help='Ignore TLS certificate warnings')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0.0')
     return parser.parse_args()
-
-# We don't need this, do we?
-def print_help():
-    print("Usage: python check_foreman.py -u <hostname>")
-    print("Options:")
-    print("  -h, --host    Specify the target hostname")
-    print("  -d, --debug   Enable debug mode")
-    print("  -s, --simulate Do not make any real API calls. Just use the example-data/example-api-response.json file")
-    print("  -h, --help    Show this help message")
 
 if __name__ == "__main__":
     args = parse_arguments()
@@ -159,11 +152,17 @@ if __name__ == "__main__":
         sys.exit(EXIT_CODE_TARGET_EMPTY)
 
     if args.simulate:
-        debug_message("Simulation mode enabled")
+        debug_message("Simulation mode enabled", args.debug)
         data = load_example_file("example-data/example-api-response.json")
+    elif args.insecure:
+        debug_message("Insecure detected, setting TLS Check", args.debug)
+        verify_tls = False
+        data = get_api_data(SATELLITE_API_ENDPOINT, verify_tls, args.debug)
     else:
-        data = get_api_data(SATELLITE_API_ENDPOINT)
-    
+        debug_message("No other modifier detected. Secure Mode enabled", args.debug)
+        verify_tls = True
+        data = get_api_data(SATELLITE_API_ENDPOINT, verify_tls, args.debug)
+
     debug_message(f'Got target hostname {target_host}', args.debug)
 
     print_execution_status(data, target_host, args.debug)
