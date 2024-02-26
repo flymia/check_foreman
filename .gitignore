@@ -189,3 +189,5 @@ Temporary Items
 #.idea/
 ./local/share/check_mk/agents/plugins/example-data/*
 local/share/check_mk/agents/plugins/example-data/*
+.local/lib/check_mk/base/plugins/agent_based/example-data/*
+local/lib/check_mk/base/plugins/agent_based/example-data/*
