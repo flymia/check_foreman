@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 
 # check_foreman by Marc Sauer
-# Licensed under GPL v3
+# This is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  Ovirt Plugin is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
 
 import json
 import sys
 import argparse
-import requests
+import logging
 
 # Edit these variables accordingly
 SATELLITE_SERVER_IP="satellite.example"
@@ -21,6 +32,16 @@ EXIT_CODE_JSON_ERROR=3
 EXIT_CODE_EXAMPLE_FILE_NOT_FOUND=4
 EXIT_CODE_TARGET_EMPTY=5
 EXIT_CODE_REQUEST_ERROR=6
+EXIT_CODE_NO_REQUESTS=7
+
+try:
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+except ImportError:
+    sys.stdout.write("<<<check_foreman_info>>>\n"
+                     "Error: check_foreman requires the requests library."
+                     " Please install it on the monitored system.\n")
+    sys.exit(EXIT_CODE_NO_REQUESTS)
 
 def debug_message(message, debug=False):
     if debug:
@@ -40,6 +61,7 @@ def load_example_file(filepath):
 
     except json.JSONDecodeError:
         print(f'The file {filepath} is not valid JSON.')
+        sys.exit(EXIT_CODE_JSON_ERROR)
 
 def get_api_data(api_url, insecure, debug=False):
     try:
@@ -166,5 +188,5 @@ if __name__ == "__main__":
     debug_message(f'Got target hostname {target_host}', args.debug)
 
     print_execution_status(data, target_host, args.debug)
-    print_global_status(data, target_host, args.debug)
-    print_errata_status(data, target_host, args.debug)
+    #print_global_status(data, target_host, args.debug)
+    #print_errata_status(data, target_host, args.debug)
