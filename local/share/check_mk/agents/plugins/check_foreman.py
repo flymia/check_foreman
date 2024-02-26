@@ -37,6 +37,7 @@ EXIT_CODE_NO_REQUESTS=7
 try:
     import requests
     from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    from requests.auth import HTTPBasicAuth
 except ImportError:
     sys.stdout.write("<<<check_foreman_info>>>\n"
                      "Error: check_foreman requires the requests library."
@@ -186,7 +187,7 @@ if __name__ == "__main__":
         data = get_api_data(SATELLITE_API_ENDPOINT, verify_tls, args.debug)
 
     debug_message(f'Got target hostname {target_host}', args.debug)
-
+    print("<<<check_foreman:sep(59)>>>")
     print_execution_status(data, target_host, args.debug)
     #print_global_status(data, target_host, args.debug)
     #print_errata_status(data, target_host, args.debug)
